@@ -39,3 +39,8 @@ class UserAPITests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNotEqual(self.password, self.user.password)
         self.assertTrue(self.user.check_password("<PASSWORD>"))
+
+    def test_user_delete_method_is_not_allowed(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.delete(USER_URL)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
