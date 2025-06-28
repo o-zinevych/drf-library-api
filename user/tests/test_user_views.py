@@ -5,11 +5,17 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 
+USER_URL = reverse_lazy("user:manage")
+
+
 class UserAPITests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.email = "test_email@test.com"
         self.password = "test_password1234"
+        self.user = get_user_model().objects.create_user(
+            email="another_user@test.com", password=self.password
+        )
 
     def test_user_create_with_encrypted_password(self):
         payload = {"email": self.email, "password": self.password}
@@ -19,3 +25,9 @@ class UserAPITests(TestCase):
         user = get_user_model().objects.get(pk=response.data["id"])
         self.assertNotEqual(payload["password"], user.password)
         self.assertTrue(user.check_password(payload["password"]))
+
+    def test_user_retrieves_their_own_account(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(USER_URL)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], self.user.pk)
