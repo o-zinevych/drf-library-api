@@ -9,6 +9,16 @@ class RegisterUserView(generics.CreateAPIView):
     serializer_class = UserSerializer
 
 
+class ManageUserView(generics.RetrieveUpdateDestroyAPIView):
+    """View to let authenticated users manage their own account."""
+
+    serializer_class = UserSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_object(self):
+        return self.request.user
+
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = get_user_model().objects.all()
 
