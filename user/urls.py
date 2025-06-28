@@ -11,11 +11,10 @@ router = DefaultRouter()
 router.register("", UserViewSet, basename="user")
 
 urlpatterns = [
-    path("register/", RegisterUserView.as_view(), name="register"),
+    path("", RegisterUserView.as_view(), name="register"),
     path("me/", ManageUserView.as_view(), name="manage"),
     path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    path("", include(router.urls)),
 ]
 
 app_name = "user"
