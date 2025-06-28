@@ -4,6 +4,7 @@ from django.urls import reverse_lazy
 from rest_framework import status
 from rest_framework.test import APIClient
 
+import user
 
 USER_URL = reverse_lazy("user:manage")
 
@@ -31,3 +32,10 @@ class UserAPITests(TestCase):
         response = self.client.get(USER_URL)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], self.user.pk)
+
+    def test_user_password_update_is_encrypted(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.patch(USER_URL, {"password": "<PASSWORD>"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotEqual(self.password, self.user.password)
+        self.assertTrue(self.user.check_password("<PASSWORD>"))
