@@ -4,8 +4,8 @@ from django.urls import reverse_lazy
 from rest_framework import status
 from rest_framework.test import APIClient
 
-import user
 
+USER_REGISTER_URL = reverse_lazy("user:register")
 USER_URL = reverse_lazy("user:manage")
 
 
@@ -20,7 +20,7 @@ class UserAPITests(TestCase):
 
     def test_user_create_with_encrypted_password(self):
         payload = {"email": self.email, "password": self.password}
-        response = self.client.post(reverse_lazy("user:register"), data=payload)
+        response = self.client.post(USER_REGISTER_URL, data=payload)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         user = get_user_model().objects.get(pk=response.data["id"])
