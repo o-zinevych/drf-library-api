@@ -9,7 +9,7 @@ class RegisterUserView(generics.CreateAPIView):
     serializer_class = UserSerializer
 
 
-class ManageUserView(generics.RetrieveUpdateDestroyAPIView):
+class ManageUserView(generics.RetrieveUpdateAPIView):
     """View to let authenticated users manage their own account."""
 
     serializer_class = UserSerializer
@@ -17,17 +17,3 @@ class ManageUserView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         return self.request.user
-
-
-class UserViewSet(viewsets.ModelViewSet):
-    queryset = get_user_model().objects.all()
-
-    def get_permissions(self):
-        if self.request.method in permissions.SAFE_METHODS:
-            return (IsAuthenticated(),)
-        return (IsAdminUser(),)
-
-    def get_serializer_class(self):
-        if self.request.method in permissions.SAFE_METHODS:
-            return UserSerializer
-        return UserAdminUpdateSerializer
