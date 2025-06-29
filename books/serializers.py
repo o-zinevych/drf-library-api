@@ -16,6 +16,13 @@ class BookSerializer(serializers.ModelSerializer):
             )
         ]
 
+    def to_representation(self, instance):
+        """Display cover as human-readable str instead of db value"""
+
+        representation = super().to_representation(instance)
+        representation["cover"] = instance.get_cover_display()
+        return representation
+
 
 class BookListSerializer(serializers.ModelSerializer):
     class Meta:
