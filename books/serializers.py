@@ -15,3 +15,9 @@ class BookSerializer(serializers.ModelSerializer):
                 message="This book already exists.",
             )
         ]
+
+
+class BookListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Book
+        fields = ("id", "title", "author")
