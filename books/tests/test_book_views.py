@@ -5,9 +5,13 @@ from rest_framework.reverse import reverse_lazy
 from rest_framework.test import APIClient
 
 from books.models import Book
-from books.serializers import BookListSerializer
+from books.serializers import BookListSerializer, BookSerializer
 
 BOOK_LIST_URL = reverse_lazy("books:book-list")
+
+
+def book_detail_url(book_id):
+    return reverse_lazy("books:book-detail", args=[book_id])
 
 
 class BookAPITests(TestCase):
@@ -62,3 +66,10 @@ class BookAPITests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(serializer.data, response.data["results"])
+
+    def test_book_detail_view_representation(self):
+        serializer = BookSerializer(self.book)
+        response = self.client.get(book_detail_url(self.book.id))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(serializer.data, response.data)
+        self.assertEqual(self.cover.capitalize(), response.data["cover"])
