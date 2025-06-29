@@ -85,3 +85,15 @@ class BookAPITests(TestCase):
         self.client.force_authenticate(self.admin_user)
         response = self.client.put(book_detail_url(self.book.id), self.payload)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_book_destroy_is_forbidden_when_not_admin(self):
+        response = self.client.delete(book_detail_url(self.book.id))
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.client.force_authenticate(self.user)
+        response = self.client.delete(book_detail_url(self.book.id))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_authenticate(self.admin_user)
+        response = self.client.delete(book_detail_url(self.book.id))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
