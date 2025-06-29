@@ -73,3 +73,15 @@ class BookAPITests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(serializer.data, response.data)
         self.assertEqual(self.cover.capitalize(), response.data["cover"])
+
+    def test_book_update_is_forbidden_when_not_admin(self):
+        response = self.client.put(book_detail_url(self.book.id), self.payload)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.client.force_authenticate(self.user)
+        response = self.client.put(book_detail_url(self.book.id), self.payload)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_authenticate(self.admin_user)
+        response = self.client.put(book_detail_url(self.book.id), self.payload)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
