@@ -5,7 +5,7 @@ from rest_framework.reverse import reverse_lazy
 from rest_framework.test import APIClient
 
 from books.models import Book
-
+from books.serializers import BookListSerializer
 
 BOOK_LIST_URL = reverse_lazy("books:book-list")
 
@@ -53,3 +53,12 @@ class BookAPITests(TestCase):
         self.client.force_authenticate(self.admin_user)
         response = self.client.post(BOOK_LIST_URL, self.payload)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_book_list_correct_and_available_to_anyone(self):
+        Book.objects.create(**self.payload)
+        books = Book.objects.all()
+        serializer = BookListSerializer(books, many=True)
+        response = self.client.get(BOOK_LIST_URL)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(serializer.data, response.data["results"])
