@@ -81,3 +81,12 @@ class BorrowingsAPITests(TestCase):
         response = self.client.get(BORROWING_LIST_URL, {"is_active": "false"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(serializer.data, response.data["results"])
+
+    def test_applying_two_filters_to_borrowing_list(self):
+        queryset = Borrowing.objects.select_related("book", "user").filter(
+            Q(actual_return_date__isnull=True), user_id=self.user.id
+        )
+        serializer = BorrowingListSerializer(queryset, many=True)
+        response = self.client.get(BORROWING_LIST_URL, {"user_id": self.user.id, "is_active": "true"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(serializer.data, response.data["results"])
