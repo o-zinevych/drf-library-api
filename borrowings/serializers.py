@@ -65,7 +65,6 @@ class BorrowingCreateSerializer(serializers.ModelSerializer):
             "expected_return_date",
             "actual_return_date",
             "book",
-            "user",
         )
 
     @transaction.atomic
