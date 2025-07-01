@@ -20,6 +20,10 @@ class Borrowing(models.Model):
     def __str__(self):
         return f"{self.book.title} due {self.expected_return_date}"
 
+    @property
+    def is_active(self):
+        return not bool(self.actual_return_date)
+
     @staticmethod
     def validate_future_date(date, borrowing_date_attr, error_to_raise):
         """Validates expected return date."""
@@ -31,7 +35,7 @@ class Borrowing(models.Model):
     @staticmethod
     def validate_today_or_past_date(date, borrowing_date_attr, error_to_raise):
         """Validates borrow and actual return dates."""
-        if date > datetime.date.today():
+        if date and date > datetime.date.today():
             raise error_to_raise(
                 {borrowing_date_attr: f"This date must be today or in the past."}
             )
