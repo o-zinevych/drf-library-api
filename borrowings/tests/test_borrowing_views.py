@@ -1,6 +1,7 @@
 import datetime
 
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.reverse import reverse_lazy
@@ -39,6 +40,7 @@ class BorrowingsAPITests(TestCase):
         self.another_borrowing = Borrowing.objects.create(
             borrow_date=datetime.date.today(),
             expected_return_date=datetime.date.today() + datetime.timedelta(days=14),
+            actual_return_date=datetime.date.today(),
             book=self.book,
             user=self.another_user,
         )
@@ -61,3 +63,12 @@ class BorrowingsAPITests(TestCase):
             [self.another_borrowing], many=True
         )
         self.assertNotEqual(another_user_serializer.data, response.data["results"])
+
+    def test_borrowings_is_active_true_list_filter(self):
+        queryset = Borrowing.objects.select_related("book", "user").filter(
+            Q(actual_return_date__isnull=True)
+        )
+        serializer = BorrowingListSerializer(queryset, many=True)
+        response = self.client.get(BORROWING_LIST_URL, {"is_active": "true"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(serializer.data, response.data["results"])
