@@ -67,3 +67,14 @@ class BorrowingModelTests(TestCase):
                 book=self.book,
                 user=self.user,
             )
+
+    def test_actual_return_date_validation(self):
+        future_date = self.borrow_date + timedelta(days=3)
+        with self.assertRaises(ValidationError):
+            Borrowing.objects.create(
+                borrow_date=self.borrow_date,
+                expected_return_date=self.expected_return_date,
+                actual_return_date=future_date,
+                book=self.book,
+                user=self.user,
+            )
