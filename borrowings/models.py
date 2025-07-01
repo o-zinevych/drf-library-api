@@ -51,3 +51,7 @@ class Borrowing(models.Model):
         self.validate_today_or_past_date(
             self.actual_return_date, "actual_return_date", ValidationError
         )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
