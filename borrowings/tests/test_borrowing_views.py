@@ -1,0 +1,106 @@
+import datetime
+
+from django.contrib.auth import get_user_model
+from django.db.models import Q
+from django.test import TestCase
+from rest_framework import status
+from rest_framework.reverse import reverse_lazy
+from rest_framework.test import APIClient
+
+from books.models import Book
+from borrowings.models import Borrowing
+from borrowings.serializers import (
+    BorrowingListSerializer,
+    BorrowingDetailSerializer,
+)
+
+BORROWING_LIST_URL = reverse_lazy("borrowings:borrowing-list")
+
+
+def borrowing_detail_url(borrowing_id):
+    return reverse_lazy("borrowings:borrowing-detail", args=[borrowing_id])
+
+
+class BorrowingsAPITests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.book = Book.objects.create(
+            title="Title",
+            author="Author",
+            cover="SOFT",
+            inventory=5,
+            daily_fee=0.5,
+        )
+        self.user = get_user_model().objects.create_user(
+            email="user@test.com", password="test1234"
+        )
+        self.another_user = get_user_model().objects.create_user(
+            email="another_user@test.com", password="test1234"
+        )
+        self.borrowing = Borrowing.objects.create(
+            borrow_date=datetime.date.today(),
+            expected_return_date=datetime.date.today() + datetime.timedelta(days=14),
+            book=self.book,
+            user=self.user,
+        )
+        self.another_borrowing = Borrowing.objects.create(
+            borrow_date=datetime.date.today(),
+            expected_return_date=datetime.date.today() + datetime.timedelta(days=14),
+            actual_return_date=datetime.date.today(),
+            book=self.book,
+            user=self.another_user,
+        )
+
+    def test_borrowings_list(self):
+        queryset = Borrowing.objects.select_related("book", "user")
+        serializer = BorrowingListSerializer(queryset, many=True)
+
+        response = self.client.get(BORROWING_LIST_URL)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(serializer.data, response.data["results"])
+
+    def test_borrowings_user_id_list_filter(self):
+        serializer = BorrowingListSerializer([self.borrowing], many=True)
+        response = self.client.get(BORROWING_LIST_URL, {"user_id": self.user.id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(serializer.data, response.data["results"])
+
+        another_user_serializer = BorrowingListSerializer(
+            [self.another_borrowing], many=True
+        )
+        self.assertNotEqual(another_user_serializer.data, response.data["results"])
+
+    def test_borrowings_is_active_true_list_filter(self):
+        queryset = Borrowing.objects.select_related("book", "user").filter(
+            Q(actual_return_date__isnull=True)
+        )
+        serializer = BorrowingListSerializer(queryset, many=True)
+        response = self.client.get(BORROWING_LIST_URL, {"is_active": "true"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(serializer.data, response.data["results"])
+
+    def test_borrowings_is_active_false_list_filter(self):
+        queryset = Borrowing.objects.select_related("book", "user").filter(
+            Q(actual_return_date__isnull=False)
+        )
+        serializer = BorrowingListSerializer(queryset, many=True)
+        response = self.client.get(BORROWING_LIST_URL, {"is_active": "false"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(serializer.data, response.data["results"])
+
+    def test_applying_two_filters_to_borrowing_list(self):
+        queryset = Borrowing.objects.select_related("book", "user").filter(
+            Q(actual_return_date__isnull=True), user_id=self.user.id
+        )
+        serializer = BorrowingListSerializer(queryset, many=True)
+        response = self.client.get(
+            BORROWING_LIST_URL, {"user_id": self.user.id, "is_active": "true"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(serializer.data, response.data["results"])
+
+    def test_borrowing_detail(self):
+        serializer = BorrowingDetailSerializer(self.borrowing)
+        response = self.client.get(borrowing_detail_url(self.borrowing.id))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(serializer.data, response.data)
