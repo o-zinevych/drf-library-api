@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from rest_framework.exceptions import ValidationError
 
 from books.models import Book
 from borrowings.models import Borrowing
@@ -46,3 +47,13 @@ class BorrowingModelTests(TestCase):
             user=self.user,
         )
         self.assertFalse(inactive_borrowing.is_active)
+
+    def test_borrowing_expected_return_date_validation(self):
+        past_date = self.borrow_date - timedelta(days=3)
+        with self.assertRaises(ValidationError):
+            Borrowing.objects.create(
+                borrow_date=self.borrow_date,
+                expected_return_date=past_date,
+                book=self.book,
+                user=self.user,
+            )
