@@ -1,4 +1,5 @@
 import datetime
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -33,3 +34,15 @@ class BorrowingModelTests(TestCase):
             f"{self.book.title} due {self.expected_return_date}",
             str(self.valid_borrowing),
         )
+
+    def test_is_active_property(self):
+        self.assertTrue(self.valid_borrowing.is_active)
+
+        inactive_borrowing = Borrowing.objects.create(
+            borrow_date=self.borrow_date,
+            expected_return_date=self.expected_return_date,
+            actual_return_date=self.borrow_date,
+            book=self.book,
+            user=self.user,
+        )
+        self.assertFalse(inactive_borrowing.is_active)
