@@ -9,10 +9,16 @@ from rest_framework.test import APIClient
 
 from books.models import Book
 from borrowings.models import Borrowing
-from borrowings.serializers import BorrowingListSerializer
-
+from borrowings.serializers import (
+    BorrowingListSerializer,
+    BorrowingDetailSerializer,
+)
 
 BORROWING_LIST_URL = reverse_lazy("borrowings:borrowing-list")
+
+
+def borrowing_detail_url(borrowing_id):
+    return reverse_lazy("borrowings:borrowing-detail", args=[borrowing_id])
 
 
 class BorrowingsAPITests(TestCase):
@@ -87,6 +93,14 @@ class BorrowingsAPITests(TestCase):
             Q(actual_return_date__isnull=True), user_id=self.user.id
         )
         serializer = BorrowingListSerializer(queryset, many=True)
-        response = self.client.get(BORROWING_LIST_URL, {"user_id": self.user.id, "is_active": "true"})
+        response = self.client.get(
+            BORROWING_LIST_URL, {"user_id": self.user.id, "is_active": "true"}
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(serializer.data, response.data["results"])
+
+    def test_borrowing_detail(self):
+        serializer = BorrowingDetailSerializer(self.borrowing)
+        response = self.client.get(borrowing_detail_url(self.borrowing.id))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(serializer.data, response.data)
