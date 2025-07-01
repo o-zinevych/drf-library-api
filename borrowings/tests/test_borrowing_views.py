@@ -50,3 +50,14 @@ class BorrowingsAPITests(TestCase):
         response = self.client.get(BORROWING_LIST_URL)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(serializer.data, response.data["results"])
+
+    def test_borrowings_user_id_list_filter(self):
+        serializer = BorrowingListSerializer([self.borrowing], many=True)
+        response = self.client.get(BORROWING_LIST_URL, {"user_id": self.user.id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(serializer.data, response.data["results"])
+
+        another_user_serializer = BorrowingListSerializer(
+            [self.another_borrowing], many=True
+        )
+        self.assertNotEqual(another_user_serializer.data, response.data["results"])
