@@ -37,12 +37,17 @@ class BorrowingsAPITests(TestCase):
             inventory=self.initial_inventory,
             daily_fee=0.5,
         )
+
         self.user = get_user_model().objects.create_user(
             email="user@test.com", password="test1234"
         )
         self.another_user = get_user_model().objects.create_user(
             email="another_user@test.com", password="test1234"
         )
+        self.admin_user = get_user_model().objects.create_superuser(
+            email="admin@test.com", password="test1234"
+        )
+
         self.borrowing = Borrowing.objects.create(
             borrow_date=self.today,
             expected_return_date=self.valid_expected_return_date,
@@ -62,6 +67,15 @@ class BorrowingsAPITests(TestCase):
         queryset = Borrowing.objects.select_related("book", "user").filter(
             user=self.user
         )
+        serializer = BorrowingListSerializer(queryset, many=True)
+
+        response = self.client.get(BORROWING_LIST_URL)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(serializer.data, response.data["results"])
+
+    def test_borrowings_list_returns_all_borrowings_for_admin_users(self):
+        self.client.force_authenticate(self.admin_user)
+        queryset = Borrowing.objects.select_related("book", "user")
         serializer = BorrowingListSerializer(queryset, many=True)
 
         response = self.client.get(BORROWING_LIST_URL)
