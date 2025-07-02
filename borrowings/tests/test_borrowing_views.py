@@ -57,8 +57,11 @@ class BorrowingsAPITests(TestCase):
             user=self.another_user,
         )
 
-    def test_borrowings_list(self):
-        queryset = Borrowing.objects.select_related("book", "user")
+    def test_borrowings_list_returns_current_user_borrowings(self):
+        self.client.force_authenticate(self.user)
+        queryset = Borrowing.objects.select_related("book", "user").filter(
+            user=self.user
+        )
         serializer = BorrowingListSerializer(queryset, many=True)
 
         response = self.client.get(BORROWING_LIST_URL)
