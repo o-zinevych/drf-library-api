@@ -188,3 +188,17 @@ class BorrowingsAPITests(TestCase):
 
         self.book.refresh_from_db()
         self.assertEqual(self.book.inventory, self.initial_inventory - 1)
+
+    def test_borrowing_has_current_user_assigned_when_created(self):
+        payload = {
+            "borrow_date": self.today,
+            "expected_return_date": self.valid_expected_return_date,
+            "actual_return_date": "",
+            "book": self.book.id,
+        }
+        self.client.force_authenticate(self.user)
+        response = self.client.post(BORROWING_LIST_URL, payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        new_borrowing = Borrowing.objects.get(pk=response.data["id"])
+        self.assertEqual(new_borrowing.user, self.user)
