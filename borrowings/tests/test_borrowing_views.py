@@ -29,11 +29,12 @@ class BorrowingsAPITests(TestCase):
         self.valid_expected_return_date = datetime.date.today() + datetime.timedelta(
             days=14
         )
+        self.initial_inventory = 5
         self.book = Book.objects.create(
             title="Title",
             author="Author",
             cover="SOFT",
-            inventory=5,
+            inventory=self.initial_inventory,
             daily_fee=0.5,
         )
         self.user = get_user_model().objects.create_user(
@@ -172,3 +173,18 @@ class BorrowingsAPITests(TestCase):
         response = self.client.post(BORROWING_LIST_URL, invalid_payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("book_inventory", response.data)
+
+    def test_borrowing_creation_subtracts_1_from_book_inventory(self):
+        payload = {
+            "borrow_date": self.today,
+            "expected_return_date": self.valid_expected_return_date,
+            "actual_return_date": "",
+            "book": self.book.id,
+        }
+
+        self.client.force_authenticate(self.user)
+        response = self.client.post(BORROWING_LIST_URL, payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.book.refresh_from_db()
+        self.assertEqual(self.book.inventory, self.initial_inventory - 1)
