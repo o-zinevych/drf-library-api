@@ -131,6 +131,7 @@ class BorrowingsAPITests(TestCase):
         self.assertEqual(serializer.data, response.data["results"])
 
     def test_borrowing_detail(self):
+        self.client.force_authenticate(self.user)
         serializer = BorrowingDetailSerializer(self.borrowing)
         response = self.client.get(borrowing_detail_url(self.borrowing.id))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
