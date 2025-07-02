@@ -22,6 +22,10 @@ def borrowing_detail_url(borrowing_id):
     return reverse_lazy("borrowings:borrowing-detail", args=[borrowing_id])
 
 
+def borrowing_return_url(borrowing_id):
+    return reverse_lazy("borrowings:borrowing-return-borrowing", args=[borrowing_id])
+
+
 class BorrowingsAPITests(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -215,3 +219,13 @@ class BorrowingsAPITests(TestCase):
 
         new_borrowing = Borrowing.objects.get(pk=response.data["id"])
         self.assertEqual(new_borrowing.user, self.user)
+
+    def test_borrowing_can_be_returned_only_once(self):
+        payload = {"actual_return_date": self.today}
+        self.client.force_authenticate(self.user)
+        response = self.client.post(borrowing_return_url(self.borrowing.id), payload)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        same_return = self.client.post(borrowing_return_url(self.borrowing.id), payload)
+        self.assertEqual(same_return.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("You've already returned this book.", same_return.data["detail"])
