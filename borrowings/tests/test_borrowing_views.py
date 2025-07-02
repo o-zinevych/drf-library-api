@@ -229,3 +229,12 @@ class BorrowingsAPITests(TestCase):
         same_return = self.client.post(borrowing_return_url(self.borrowing.id), payload)
         self.assertEqual(same_return.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIn("You've already returned this book.", same_return.data["detail"])
+
+    def test_book_inventory_increases_by_1_when_borrowing_is_returned(self):
+        payload = {"actual_return_date": self.today}
+        self.client.force_authenticate(self.user)
+        response = self.client.post(borrowing_return_url(self.borrowing.id), payload)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.book.refresh_from_db()
+        self.assertEqual(self.book.inventory, self.initial_inventory + 1)
