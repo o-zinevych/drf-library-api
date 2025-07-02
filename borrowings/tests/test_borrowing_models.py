@@ -78,3 +78,19 @@ class BorrowingModelTests(TestCase):
                 book=self.book,
                 user=self.user,
             )
+
+    def test_book_inventory_validation(self):
+        zero_inventory_book = Book.objects.create(
+            title="Another Title",
+            author="Author",
+            cover="SOFT",
+            inventory=0,
+            daily_fee=0.5,
+        )
+        with self.assertRaises(ValidationError):
+            Borrowing.objects.create(
+                borrow_date=self.borrow_date,
+                expected_return_date=self.expected_return_date,
+                book=zero_inventory_book,
+                user=self.user,
+            )
