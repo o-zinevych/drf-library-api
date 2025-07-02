@@ -12,6 +12,7 @@ from borrowings.models import Borrowing
 from borrowings.serializers import (
     BorrowingListSerializer,
     BorrowingDetailSerializer,
+    BorrowingCreateSerializer,
 )
 
 BORROWING_LIST_URL = reverse_lazy("borrowings:borrowing-list")
@@ -24,6 +25,10 @@ def borrowing_detail_url(borrowing_id):
 class BorrowingsAPITests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.today = datetime.date.today()
+        self.valid_expected_return_date = datetime.date.today() + datetime.timedelta(
+            days=14
+        )
         self.book = Book.objects.create(
             title="Title",
             author="Author",
@@ -38,15 +43,15 @@ class BorrowingsAPITests(TestCase):
             email="another_user@test.com", password="test1234"
         )
         self.borrowing = Borrowing.objects.create(
-            borrow_date=datetime.date.today(),
-            expected_return_date=datetime.date.today() + datetime.timedelta(days=14),
+            borrow_date=self.today,
+            expected_return_date=self.valid_expected_return_date,
             book=self.book,
             user=self.user,
         )
         self.another_borrowing = Borrowing.objects.create(
-            borrow_date=datetime.date.today(),
-            expected_return_date=datetime.date.today() + datetime.timedelta(days=14),
-            actual_return_date=datetime.date.today(),
+            borrow_date=self.today,
+            expected_return_date=self.valid_expected_return_date,
+            actual_return_date=self.today,
             book=self.book,
             user=self.another_user,
         )
@@ -104,3 +109,66 @@ class BorrowingsAPITests(TestCase):
         response = self.client.get(borrowing_detail_url(self.borrowing.id))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(serializer.data, response.data)
+
+    def test_borrowing_create_serializer_borrow_date_validation(self):
+        invalid_payload = {
+            "borrow_date": self.today + datetime.timedelta(days=1),
+            "expected_return_date": self.valid_expected_return_date,
+            "actual_return_date": self.today,
+            "book": self.book.id,
+        }
+
+        serializer = BorrowingCreateSerializer(data=invalid_payload)
+        self.assertFalse(serializer.is_valid())
+        response = self.client.post(BORROWING_LIST_URL, invalid_payload)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("borrow_date", response.data)
+
+    def test_borrowing_create_serializer_expected_return_date_validation(self):
+        invalid_payload = {
+            "borrow_date": self.today,
+            "expected_return_date": self.today - datetime.timedelta(days=1),
+            "actual_return_date": self.today,
+            "book": self.book.id,
+        }
+
+        serializer = BorrowingCreateSerializer(data=invalid_payload)
+        self.assertFalse(serializer.is_valid())
+        response = self.client.post(BORROWING_LIST_URL, invalid_payload)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("expected_return_date", response.data)
+
+    def test_borrowing_create_serializer_actual_return_date_validation(self):
+        invalid_payload = {
+            "borrow_date": self.today,
+            "expected_return_date": self.valid_expected_return_date,
+            "actual_return_date": self.today + datetime.timedelta(days=1),
+            "book": self.book.id,
+        }
+
+        serializer = BorrowingCreateSerializer(data=invalid_payload)
+        self.assertFalse(serializer.is_valid())
+        response = self.client.post(BORROWING_LIST_URL, invalid_payload)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("actual_return_date", response.data)
+
+    def test_borrowing_create_serializer_zero_inventory_validation(self):
+        zero_inventory_book = Book.objects.create(
+            title="Another Title",
+            author="Author",
+            cover="SOFT",
+            inventory=0,
+            daily_fee=0.5,
+        )
+        invalid_payload = {
+            "borrow_date": self.today,
+            "expected_return_date": self.valid_expected_return_date,
+            "actual_return_date": self.today,
+            "book": zero_inventory_book.id,
+        }
+
+        serializer = BorrowingCreateSerializer(data=invalid_payload)
+        self.assertFalse(serializer.is_valid())
+        response = self.client.post(BORROWING_LIST_URL, invalid_payload)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("book_inventory", response.data)
