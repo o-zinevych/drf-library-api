@@ -39,7 +39,7 @@ class BorrowingViewSet(
             user_id = int(user_id)
             queryset = queryset.filter(user_id=user_id)
 
-        if self.request.user and self.request.user.is_authenticated:
+        if self.request.user.is_authenticated and not self.request.user.is_superuser:
             queryset = queryset.filter(user=self.request.user)
 
         if is_active == "true":
