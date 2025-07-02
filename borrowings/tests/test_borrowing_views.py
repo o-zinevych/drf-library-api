@@ -147,6 +147,8 @@ class BorrowingsAPITests(TestCase):
 
         serializer = BorrowingCreateSerializer(data=invalid_payload)
         self.assertFalse(serializer.is_valid())
+
+        self.client.force_authenticate(self.user)
         response = self.client.post(BORROWING_LIST_URL, invalid_payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("borrow_date", response.data)
@@ -161,6 +163,8 @@ class BorrowingsAPITests(TestCase):
 
         serializer = BorrowingCreateSerializer(data=invalid_payload)
         self.assertFalse(serializer.is_valid())
+
+        self.client.force_authenticate(self.user)
         response = self.client.post(BORROWING_LIST_URL, invalid_payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("expected_return_date", response.data)
@@ -175,6 +179,8 @@ class BorrowingsAPITests(TestCase):
 
         serializer = BorrowingCreateSerializer(data=invalid_payload)
         self.assertFalse(serializer.is_valid())
+
+        self.client.force_authenticate(self.user)
         response = self.client.post(BORROWING_LIST_URL, invalid_payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("actual_return_date", response.data)
@@ -196,6 +202,8 @@ class BorrowingsAPITests(TestCase):
 
         serializer = BorrowingCreateSerializer(data=invalid_payload)
         self.assertFalse(serializer.is_valid())
+
+        self.client.force_authenticate(self.user)
         response = self.client.post(BORROWING_LIST_URL, invalid_payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("book_inventory", response.data)
