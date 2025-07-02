@@ -1,12 +1,15 @@
 from django.db.models import Q
-from rest_framework import viewsets, mixins
+from rest_framework import viewsets, mixins, status
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from borrowings.models import Borrowing
 from borrowings.serializers import (
     BorrowingListSerializer,
     BorrowingDetailSerializer,
     BorrowingCreateSerializer,
+    BorrowingReturnSerializer,
 )
 
 
@@ -23,6 +26,8 @@ class BorrowingViewSet(
             return BorrowingListSerializer
         if self.action == "retrieve":
             return BorrowingDetailSerializer
+        if self.action == "return_borrowing":
+            return BorrowingReturnSerializer
         return BorrowingCreateSerializer
 
     def perform_create(self, serializer):
@@ -48,3 +53,20 @@ class BorrowingViewSet(
             queryset = queryset.filter(Q(actual_return_date__isnull=False))
 
         return queryset
+
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_path="return",
+    )
+    def return_borrowing(self, request, pk=None):
+        borrowing = self.get_object()
+        if borrowing.actual_return_date:
+            return Response(
+                {"detail": "You've already returned this book."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        serializer = self.get_serializer(borrowing, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
