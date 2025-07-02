@@ -5,11 +5,15 @@ from borrowings.models import Borrowing
 from borrowings.serializers import (
     BorrowingListSerializer,
     BorrowingDetailSerializer,
+    BorrowingCreateSerializer,
 )
 
 
 class BorrowingViewSet(
-    viewsets.GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin
+    viewsets.GenericViewSet,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
 ):
 
     def get_serializer_class(self):
@@ -17,6 +21,10 @@ class BorrowingViewSet(
             return BorrowingListSerializer
         if self.action == "retrieve":
             return BorrowingDetailSerializer
+        return BorrowingCreateSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
     def get_queryset(self):
         """Filter the queryset by user_id and activity status."""

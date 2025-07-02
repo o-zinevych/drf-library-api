@@ -40,6 +40,14 @@ class Borrowing(models.Model):
                 {borrowing_date_attr: f"This date must be today or in the past."}
             )
 
+    @staticmethod
+    def validate_book_inventory_is_not_zero(book, error_to_raise):
+        """Validates book inventory is available for borrowing."""
+        if book.inventory == 0:
+            raise error_to_raise(
+                {"book_inventory": f"This book is unavailable for borrowing."}
+            )
+
     def clean(self):
         self.validate_today_or_past_date(
             self.borrow_date, "borrow_date", ValidationError
@@ -51,6 +59,7 @@ class Borrowing(models.Model):
         self.validate_today_or_past_date(
             self.actual_return_date, "actual_return_date", ValidationError
         )
+        self.validate_book_inventory_is_not_zero(self.book, ValidationError)
 
     def save(self, *args, **kwargs):
         self.full_clean()
