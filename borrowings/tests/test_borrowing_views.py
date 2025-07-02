@@ -37,12 +37,17 @@ class BorrowingsAPITests(TestCase):
             inventory=self.initial_inventory,
             daily_fee=0.5,
         )
+
         self.user = get_user_model().objects.create_user(
             email="user@test.com", password="test1234"
         )
         self.another_user = get_user_model().objects.create_user(
             email="another_user@test.com", password="test1234"
         )
+        self.admin_user = get_user_model().objects.create_superuser(
+            email="admin@test.com", password="test1234"
+        )
+
         self.borrowing = Borrowing.objects.create(
             borrow_date=self.today,
             expected_return_date=self.valid_expected_return_date,
@@ -57,7 +62,19 @@ class BorrowingsAPITests(TestCase):
             user=self.another_user,
         )
 
-    def test_borrowings_list(self):
+    def test_borrowings_list_returns_current_user_borrowings(self):
+        self.client.force_authenticate(self.user)
+        queryset = Borrowing.objects.select_related("book", "user").filter(
+            user=self.user
+        )
+        serializer = BorrowingListSerializer(queryset, many=True)
+
+        response = self.client.get(BORROWING_LIST_URL)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(serializer.data, response.data["results"])
+
+    def test_borrowings_list_returns_all_borrowings_for_admin_users(self):
+        self.client.force_authenticate(self.admin_user)
         queryset = Borrowing.objects.select_related("book", "user")
         serializer = BorrowingListSerializer(queryset, many=True)
 
@@ -66,7 +83,9 @@ class BorrowingsAPITests(TestCase):
         self.assertEqual(serializer.data, response.data["results"])
 
     def test_borrowings_user_id_list_filter(self):
+        self.client.force_authenticate(self.admin_user)
         serializer = BorrowingListSerializer([self.borrowing], many=True)
+
         response = self.client.get(BORROWING_LIST_URL, {"user_id": self.user.id})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(serializer.data, response.data["results"])
@@ -77,28 +96,34 @@ class BorrowingsAPITests(TestCase):
         self.assertNotEqual(another_user_serializer.data, response.data["results"])
 
     def test_borrowings_is_active_true_list_filter(self):
+        self.client.force_authenticate(self.user)
         queryset = Borrowing.objects.select_related("book", "user").filter(
-            Q(actual_return_date__isnull=True)
+            Q(actual_return_date__isnull=True), user=self.user
         )
         serializer = BorrowingListSerializer(queryset, many=True)
+
         response = self.client.get(BORROWING_LIST_URL, {"is_active": "true"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(serializer.data, response.data["results"])
 
     def test_borrowings_is_active_false_list_filter(self):
+        self.client.force_authenticate(self.user)
         queryset = Borrowing.objects.select_related("book", "user").filter(
-            Q(actual_return_date__isnull=False)
+            Q(actual_return_date__isnull=False), user=self.user
         )
         serializer = BorrowingListSerializer(queryset, many=True)
+
         response = self.client.get(BORROWING_LIST_URL, {"is_active": "false"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(serializer.data, response.data["results"])
 
     def test_applying_two_filters_to_borrowing_list(self):
+        self.client.force_authenticate(self.admin_user)
         queryset = Borrowing.objects.select_related("book", "user").filter(
             Q(actual_return_date__isnull=True), user_id=self.user.id
         )
         serializer = BorrowingListSerializer(queryset, many=True)
+
         response = self.client.get(
             BORROWING_LIST_URL, {"user_id": self.user.id, "is_active": "true"}
         )
@@ -106,6 +131,7 @@ class BorrowingsAPITests(TestCase):
         self.assertEqual(serializer.data, response.data["results"])
 
     def test_borrowing_detail(self):
+        self.client.force_authenticate(self.user)
         serializer = BorrowingDetailSerializer(self.borrowing)
         response = self.client.get(borrowing_detail_url(self.borrowing.id))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -121,6 +147,8 @@ class BorrowingsAPITests(TestCase):
 
         serializer = BorrowingCreateSerializer(data=invalid_payload)
         self.assertFalse(serializer.is_valid())
+
+        self.client.force_authenticate(self.user)
         response = self.client.post(BORROWING_LIST_URL, invalid_payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("borrow_date", response.data)
@@ -135,6 +163,8 @@ class BorrowingsAPITests(TestCase):
 
         serializer = BorrowingCreateSerializer(data=invalid_payload)
         self.assertFalse(serializer.is_valid())
+
+        self.client.force_authenticate(self.user)
         response = self.client.post(BORROWING_LIST_URL, invalid_payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("expected_return_date", response.data)
@@ -149,6 +179,8 @@ class BorrowingsAPITests(TestCase):
 
         serializer = BorrowingCreateSerializer(data=invalid_payload)
         self.assertFalse(serializer.is_valid())
+
+        self.client.force_authenticate(self.user)
         response = self.client.post(BORROWING_LIST_URL, invalid_payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("actual_return_date", response.data)
@@ -170,6 +202,8 @@ class BorrowingsAPITests(TestCase):
 
         serializer = BorrowingCreateSerializer(data=invalid_payload)
         self.assertFalse(serializer.is_valid())
+
+        self.client.force_authenticate(self.user)
         response = self.client.post(BORROWING_LIST_URL, invalid_payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("book_inventory", response.data)
