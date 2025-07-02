@@ -22,6 +22,10 @@ def borrowing_detail_url(borrowing_id):
     return reverse_lazy("borrowings:borrowing-detail", args=[borrowing_id])
 
 
+def borrowing_return_url(borrowing_id):
+    return reverse_lazy("borrowings:borrowing-return-borrowing", args=[borrowing_id])
+
+
 class BorrowingsAPITests(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -141,7 +145,6 @@ class BorrowingsAPITests(TestCase):
         invalid_payload = {
             "borrow_date": self.today + datetime.timedelta(days=1),
             "expected_return_date": self.valid_expected_return_date,
-            "actual_return_date": self.today,
             "book": self.book.id,
         }
 
@@ -157,7 +160,6 @@ class BorrowingsAPITests(TestCase):
         invalid_payload = {
             "borrow_date": self.today,
             "expected_return_date": self.today - datetime.timedelta(days=1),
-            "actual_return_date": self.today,
             "book": self.book.id,
         }
 
@@ -168,22 +170,6 @@ class BorrowingsAPITests(TestCase):
         response = self.client.post(BORROWING_LIST_URL, invalid_payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("expected_return_date", response.data)
-
-    def test_borrowing_create_serializer_actual_return_date_validation(self):
-        invalid_payload = {
-            "borrow_date": self.today,
-            "expected_return_date": self.valid_expected_return_date,
-            "actual_return_date": self.today + datetime.timedelta(days=1),
-            "book": self.book.id,
-        }
-
-        serializer = BorrowingCreateSerializer(data=invalid_payload)
-        self.assertFalse(serializer.is_valid())
-
-        self.client.force_authenticate(self.user)
-        response = self.client.post(BORROWING_LIST_URL, invalid_payload)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("actual_return_date", response.data)
 
     def test_borrowing_create_serializer_zero_inventory_validation(self):
         zero_inventory_book = Book.objects.create(
@@ -196,7 +182,6 @@ class BorrowingsAPITests(TestCase):
         invalid_payload = {
             "borrow_date": self.today,
             "expected_return_date": self.valid_expected_return_date,
-            "actual_return_date": self.today,
             "book": zero_inventory_book.id,
         }
 
@@ -212,7 +197,6 @@ class BorrowingsAPITests(TestCase):
         payload = {
             "borrow_date": self.today,
             "expected_return_date": self.valid_expected_return_date,
-            "actual_return_date": "",
             "book": self.book.id,
         }
 
@@ -227,7 +211,6 @@ class BorrowingsAPITests(TestCase):
         payload = {
             "borrow_date": self.today,
             "expected_return_date": self.valid_expected_return_date,
-            "actual_return_date": "",
             "book": self.book.id,
         }
         self.client.force_authenticate(self.user)
@@ -236,3 +219,22 @@ class BorrowingsAPITests(TestCase):
 
         new_borrowing = Borrowing.objects.get(pk=response.data["id"])
         self.assertEqual(new_borrowing.user, self.user)
+
+    def test_borrowing_can_be_returned_only_once(self):
+        payload = {"actual_return_date": self.today}
+        self.client.force_authenticate(self.user)
+        response = self.client.post(borrowing_return_url(self.borrowing.id), payload)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        same_return = self.client.post(borrowing_return_url(self.borrowing.id), payload)
+        self.assertEqual(same_return.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("You've already returned this book.", same_return.data["detail"])
+
+    def test_book_inventory_increases_by_1_when_borrowing_is_returned(self):
+        payload = {"actual_return_date": self.today}
+        self.client.force_authenticate(self.user)
+        response = self.client.post(borrowing_return_url(self.borrowing.id), payload)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.book.refresh_from_db()
+        self.assertEqual(self.book.inventory, self.initial_inventory + 1)
