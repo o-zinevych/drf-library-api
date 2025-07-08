@@ -24,4 +24,5 @@ urlpatterns = [
     path("api/user/", include("user.urls", namespace="user")),
     path("api/books/", include("books.urls", namespace="books")),
     path("api/borrowings/", include("borrowings.urls", namespace="borrowings")),
+    path("api/telegram-bot/", include("telegram_bot.urls", namespace="telegram_bot")),
 ] + debug_toolbar_urls()
