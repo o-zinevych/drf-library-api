@@ -1,7 +1,11 @@
 import os
 
 import requests
+from celery import shared_task
 from dotenv import load_dotenv
+
+from borrowings.models import Borrowing
+from telegram_bot.models import TelegramProfile
 
 load_dotenv()
 
@@ -15,3 +19,23 @@ def send_telegram_message(chat_id: str, text: str):
         "text": text,
     }
     return requests.post(url, json=payload)
+
+
+@shared_task
+def notify_user_about_borrowing(borrowing_id: int):
+    try:
+        borrowing = Borrowing.objects.select_related("user", "book").get(
+            id=borrowing_id
+        )
+        telegram_profile = TelegramProfile.objects.get(user=borrowing.user)
+
+        message = (
+            f"📚New Borrowing Created!\n"
+            f"Book: {borrowing.book.title}\n"
+            f"Borrowed on: {borrowing.borrow_date}\n"
+            f"Due: {borrowing.expected_return_date}\n"
+        )
+
+        send_telegram_message(telegram_profile.chat_id, message)
+    except (Borrowing.DoesNotExist, TelegramProfile.DoesNotExist):
+        pass
