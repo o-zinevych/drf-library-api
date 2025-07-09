@@ -37,5 +37,21 @@ services:
       - db
       - library
 
+  redis:
+    image: redis:alpine
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: on-failure
+    env_file:
+      - .env
+    command: "celery -A library_api worker -l INFO"
+    depends_on:
+      - redis
+      - library
+      - db
+
 volumes:
   my_db:
