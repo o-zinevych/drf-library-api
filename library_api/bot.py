@@ -41,11 +41,12 @@ async def get_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     if response.status_code == 200:
         await update.message.reply_text("Your account has been linked!")
+        return ConversationHandler.END
     else:
         await update.message.reply_text(
             "Failed to link your account. Check your email address and try again."
         )
-    return ConversationHandler.END
+        return EMAIL
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
