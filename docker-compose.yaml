@@ -24,5 +24,18 @@ services:
     depends_on:
       - db
 
+  telegram_bot:
+    build:
+      context: .
+    restart: always
+    env_file:
+      - .env
+    command: >
+      sh -c "python manage.py wait_for_db &&
+            python library_api/bot.py"
+    depends_on:
+      - db
+      - library
+
 volumes:
   my_db:
